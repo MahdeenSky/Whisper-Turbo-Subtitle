@@ -228,21 +228,13 @@ def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8):
 
     if Source_Language == "Automatic":
         segments, d = faster_whisper_model.transcribe(
-<<<<<<< HEAD
             uploaded_file, word_timestamps=True, log_progress=True)
-=======
-            uploaded_file, word_timestamps=True, verbose=True)
->>>>>>> 0f1cc17cb8a5cc1051d7fdfdfc40eb963f95f78e
         lang_code = d.language
         src_lang = get_language_name(lang_code)
     else:
         lang = language_dict[Source_Language]['lang_code']
         segments, d = faster_whisper_model.transcribe(
-<<<<<<< HEAD
             uploaded_file, word_timestamps=True, language=lang, log_progress=True)
-=======
-            uploaded_file, word_timestamps=True, language=lang, verbose=True)
->>>>>>> 0f1cc17cb8a5cc1051d7fdfdfc40eb963f95f78e
         src_lang = Source_Language
 
     sentence_timestamp, words_timestamp, text = format_segments(segments)
@@ -334,7 +326,3 @@ def main(debug, share):
 
 if __name__ == "__main__":
     main()
-<<<<<<< HEAD
-    #
-=======
->>>>>>> 0f1cc17cb8a5cc1051d7fdfdfc40eb963f95f78e
