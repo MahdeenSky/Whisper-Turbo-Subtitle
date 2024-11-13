@@ -13,7 +13,6 @@ import shutil
 import yt_dlp
 from pydub import AudioSegment
 import requests
-from IPython.display import Audio, display
 
 
 def get_language_name(lang_code):
@@ -261,7 +260,9 @@ def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8):
 
     with open(original_txt_name, 'w', encoding='utf-8') as f1:
         f1.write(text)
-    return original_srt_name, customize_srt_name, word_level_srt_name, original_txt_name
+    
+    beep_audio_path = os.path.join(base_path, "beep.wav")
+    return original_srt_name, customize_srt_name, word_level_srt_name, original_txt_name, beep_audio_path
 
 
 def subtitle_maker(Audio_or_Video_File, Link, Source_Language, max_words_per_subtitle):
@@ -271,22 +272,14 @@ def subtitle_maker(Audio_or_Video_File, Link, Source_Language, max_words_per_sub
         raise ValueError("Either an audio/video file or a YouTube link must be provided.")
     
     try:
-        default_srt_path, customize_srt_path, word_level_srt_path, text_path = whisper_subtitle(
+        default_srt_path, customize_srt_path, word_level_srt_path, text_path, beep_audio_path = whisper_subtitle(
             Audio_or_Video_File, Source_Language, max_words_per_subtitle=max_words_per_subtitle
         )
     except Exception as e:
         print(f"Error in whisper_subtitle: {e}")
-        default_srt_path, customize_srt_path, word_level_srt_path, text_path = None, None, None, None
+        default_srt_path, customize_srt_path, word_level_srt_path, text_path, beep_audio_path = None, None, None, None, None
 
-    # play audio when the process is done from url "https://upload.wikimedia.org/wikipedia/commons/0/05/Beep-09.ogg"
-    if not os.path.exists("beep.ogg"):
-        beep_url = "https://upload.wikimedia.org/wikipedia/commons/0/05/Beep-09.ogg"
-        response = requests.get(beep_url, headers={"User-Agent": "Mozilla/5.0"})
-        with open("beep.ogg", "wb") as f:
-            f.write(response.content)
-    display(Audio("beep.ogg", autoplay=True))
-
-    return default_srt_path, customize_srt_path, word_level_srt_path, text_path
+    return default_srt_path, customize_srt_path, word_level_srt_path, text_path, beep_audio_path
 
 
 # Updated Gradio interface to accept a link as well
@@ -323,7 +316,8 @@ def main(debug, share):
         gr.File(label="Default SRT File", show_label=True),
         gr.File(label="Customize SRT File", show_label=True),
         gr.File(label="Word Level SRT File", show_label=True),
-        gr.File(label="Text File", show_label=True)
+        gr.File(label="Text File", show_label=True),
+        gr.Audio(label="Beep Sound", autoplay=True)
     ]
 
     demo = gr.Interface(
