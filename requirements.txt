@@ -3,3 +3,5 @@ torch>=2.1.1
 gradio
 click
 ctranslate2==4.4.0
+yt-dlp
+pydub
