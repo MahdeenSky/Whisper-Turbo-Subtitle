@@ -12,6 +12,8 @@ import uuid
 import shutil
 import yt_dlp
 from pydub import AudioSegment
+import requests
+from IPython.display import Audio, display
 
 
 def get_language_name(lang_code):
@@ -228,13 +230,13 @@ def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8):
 
     if Source_Language == "Automatic":
         segments, d = faster_whisper_model.transcribe(
-            uploaded_file, word_timestamps=True, log_progress=True)
+            uploaded_file, word_timestamps=True)
         lang_code = d.language
         src_lang = get_language_name(lang_code)
     else:
         lang = language_dict[Source_Language]['lang_code']
         segments, d = faster_whisper_model.transcribe(
-            uploaded_file, word_timestamps=True, language=lang, log_progress=True)
+            uploaded_file, word_timestamps=True, language=lang)
         src_lang = Source_Language
 
     sentence_timestamp, words_timestamp, text = format_segments(segments)
@@ -266,9 +268,8 @@ def subtitle_maker(Audio_or_Video_File, Link, Source_Language, max_words_per_sub
     if Link:
         Audio_or_Video_File = download_and_convert_to_wav(Link)
     elif not Audio_or_Video_File:
-        raise ValueError(
-            "Either an audio/video file or a YouTube link must be provided.")
-
+        raise ValueError("Either an audio/video file or a YouTube link must be provided.")
+    
     try:
         default_srt_path, customize_srt_path, word_level_srt_path, text_path = whisper_subtitle(
             Audio_or_Video_File, Source_Language, max_words_per_subtitle=max_words_per_subtitle
@@ -276,6 +277,16 @@ def subtitle_maker(Audio_or_Video_File, Link, Source_Language, max_words_per_sub
     except Exception as e:
         print(f"Error in whisper_subtitle: {e}")
         default_srt_path, customize_srt_path, word_level_srt_path, text_path = None, None, None, None
+
+    # play audio when the process is done from url "https://upload.wikimedia.org/wikipedia/commons/0/05/Beep-09.ogg"
+    if not os.path.exists("beep.ogg"):
+        beep_url = "https://upload.wikimedia.org/wikipedia/commons/0/05/Beep-09.ogg"
+        response = requests.get(beep_url, headers={"User-Agent": "Mozilla/5.0"})
+        with open("beep.ogg", "wb") as f:
+            f.write(response.content)
+    beep = AudioSegment.from_file("beep.ogg")
+    display(beep, autoplay=True)
+
     return default_srt_path, customize_srt_path, word_level_srt_path, text_path
 
 
