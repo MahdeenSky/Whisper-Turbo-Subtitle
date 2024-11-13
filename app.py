@@ -284,8 +284,7 @@ def subtitle_maker(Audio_or_Video_File, Link, Source_Language, max_words_per_sub
         response = requests.get(beep_url, headers={"User-Agent": "Mozilla/5.0"})
         with open("beep.ogg", "wb") as f:
             f.write(response.content)
-    beep = AudioSegment.from_file("beep.ogg")
-    display(beep, autoplay=True)
+    display(Audio("beep.ogg", autoplay=True))
 
     return default_srt_path, customize_srt_path, word_level_srt_path, text_path
 
