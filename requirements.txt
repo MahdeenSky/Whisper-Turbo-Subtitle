@@ -4,4 +4,3 @@ gradio
 click
 ctranslate2==4.4.0
 yt-dlp
-pydub
