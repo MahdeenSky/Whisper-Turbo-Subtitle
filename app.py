@@ -216,7 +216,7 @@ def get_audio_file(uploaded_file):
     return file_path
 
 
-def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8):
+def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8, translate=False):
     global language_dict, base_path, subtitle_folder
     if torch.cuda.is_available():
         device = "cuda"
@@ -229,13 +229,13 @@ def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8):
 
     if Source_Language == "Automatic":
         segments, d = faster_whisper_model.transcribe(
-            uploaded_file, word_timestamps=True)
+            uploaded_file, word_timestamps=True, task="translate" if translate else "transcribe")
         lang_code = d.language
         src_lang = get_language_name(lang_code)
     else:
         lang = language_dict[Source_Language]['lang_code']
         segments, d = faster_whisper_model.transcribe(
-            uploaded_file, word_timestamps=True, language=lang)
+            uploaded_file, word_timestamps=True, language=lang, task="translate" if translate else "transcribe")
         src_lang = Source_Language
 
     sentence_timestamp, words_timestamp, text = format_segments(segments)
@@ -265,7 +265,7 @@ def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8):
     return original_srt_name, customize_srt_name, word_level_srt_name, original_txt_name, beep_audio_path
 
 
-def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, max_words_per_subtitle):
+def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, max_words_per_subtitle, translate):
     if Link:
         Audio_or_Video_File = download_and_convert_to_wav(Link)
     elif File_Path:
@@ -275,7 +275,7 @@ def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, max_wo
     
     try:
         default_srt_path, customize_srt_path, word_level_srt_path, text_path, beep_audio_path = whisper_subtitle(
-            Audio_or_Video_File, Source_Language, max_words_per_subtitle=max_words_per_subtitle
+            Audio_or_Video_File, Source_Language, max_words_per_subtitle=max_words_per_subtitle, translate=translate
         )
     except Exception as e:
         print(f"Error in whisper_subtitle: {e}")
@@ -309,7 +309,8 @@ def main(debug, share):
         gr.Textbox(label="YouTube Link (optional)", placeholder="Enter link here if not uploading a file"),
         gr.Textbox(label="File Path (optional)", placeholder="Enter file path here if not uploading a file or link"),
         gr.Dropdown(label="Language", choices=source_lang_list, value="Automatic"),
-        gr.Number(label="Max Word Per Subtitle Segment [Useful for Vertical Videos]", value=8)
+        gr.Number(label="Max Word Per Subtitle Segment [Useful for Vertical Videos]", value=8),
+        gr.Checkbox(label="Translate to English", value=False)
     ]
 
     gradio_outputs = [
