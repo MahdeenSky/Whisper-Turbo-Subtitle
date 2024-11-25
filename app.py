@@ -48,6 +48,7 @@ def clean_file_name(file_path):
 
 # Function to download the audio from a link using yt-dlp and convert to WAV
 def download_and_convert_to_wav(link):
+    print("Downloading audio from Link: ", link)
     global temp_folder
     ydl_opts = {
         'format': 'bestaudio/best',
@@ -61,7 +62,10 @@ def download_and_convert_to_wav(link):
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(link, download=True)
-        audio_file = info_dict['entries'][0]['title'] + ".wav"
+        if 'entries' in info_dict:
+            audio_file = temp_folder + "/" + info_dict['entries'][0]['title'] + ".wav"
+        else:
+            audio_file = ydl.prepare_filename(info_dict).rsplit(".", 1)[0] + ".wav"
     return audio_file
 
 
@@ -219,6 +223,14 @@ def get_audio_file(uploaded_file):
 
 def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8, translate=False):
     global language_dict, base_path, subtitle_folder
+    print("Transcribing audio...")
+    start = time.time()
+
+    # get duration of the audio file
+    audio = AudioSegment.from_file(uploaded_file)
+    duration = math.ceil(len(audio) / 1000)
+    del audio
+
     if torch.cuda.is_available():
         device = "cuda"
         compute_type = "float16"
@@ -263,6 +275,10 @@ def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8, t
         f1.write(text)
     
     beep_audio_path = os.path.join(base_path, "beep.wav")
+    end = time.time()
+
+    print(f"Transcription completed in {end - start:.2f} seconds.")
+    print(f"Speed: {duration / (end - start):.2f}x real-time")
     return original_srt_name, customize_srt_name, word_level_srt_name, original_txt_name, beep_audio_path
 
 
