@@ -13,7 +13,10 @@ import shutil
 import yt_dlp
 from pydub import AudioSegment
 import requests
+import logging
 
+logging.basicConfig()
+logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
 
 def get_language_name(lang_code):
     global language_dict
