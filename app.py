@@ -61,7 +61,9 @@ def download_and_convert_to_wav(link):
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(link, download=True)
+        print(info_dict)
         audio_file = ydl.prepare_filename(info_dict).rsplit(".", 1)[0] + ".wav"
+        print(audio_file)
     return audio_file
 
 
