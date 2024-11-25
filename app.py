@@ -265,11 +265,13 @@ def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8):
     return original_srt_name, customize_srt_name, word_level_srt_name, original_txt_name, beep_audio_path
 
 
-def subtitle_maker(Audio_or_Video_File, Link, Source_Language, max_words_per_subtitle):
+def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, max_words_per_subtitle):
     if Link:
         Audio_or_Video_File = download_and_convert_to_wav(Link)
+    elif File_Path:
+        Audio_or_Video_File = File_Path
     elif not Audio_or_Video_File:
-        raise ValueError("Either an audio/video file or a YouTube link must be provided.")
+        raise ValueError("Either an audio/video file, a YouTube link, or a file path must be provided.")
     
     try:
         default_srt_path, customize_srt_path, word_level_srt_path, text_path, beep_audio_path = whisper_subtitle(
@@ -304,12 +306,10 @@ def main(debug, share):
     description = "**Note**: Avoid uploading large video files. Instead, upload the audio from the video for faster processing."
     gradio_inputs = [
         gr.File(label="Upload Audio or Video File"),  # Removed optional=True
-        gr.Textbox(label="YouTube Link (optional)",
-                   placeholder="Enter link here if not uploading a file"),
-        gr.Dropdown(label="Language", choices=source_lang_list,
-                    value="Automatic"),
-        gr.Number(
-            label="Max Word Per Subtitle Segment [Useful for Vertical Videos]", value=8)
+        gr.Textbox(label="YouTube Link (optional)", placeholder="Enter link here if not uploading a file"),
+        gr.Textbox(label="File Path (optional)", placeholder="Enter file path here if not uploading a file or link"),
+        gr.Dropdown(label="Language", choices=source_lang_list, value="Automatic"),
+        gr.Number(label="Max Word Per Subtitle Segment [Useful for Vertical Videos]", value=8)
     ]
 
     gradio_outputs = [
