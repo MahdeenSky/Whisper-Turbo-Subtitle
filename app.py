@@ -179,6 +179,7 @@ source_lang_list = list(language_dict.keys())
 @click.option("--device", default="cuda", help="Device to use (cuda or cpu)")
 @click.option("--compute_type", default="float16", help="Compute type (float16, float32 or int8)")
 def main(debug, share, device, compute_type):
+    global global_model, global_align_model
     description = "**Note**: Avoid uploading large video files. Instead, upload the audio from the video for faster processing."
 
     gradio_inputs = [
