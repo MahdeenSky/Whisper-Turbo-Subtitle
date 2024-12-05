@@ -152,7 +152,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     srt_options = {"max_line_width": 100,
                    "min_char_length_splitter": 70,
                    "is_vtt": False,
-                   "lang": language_code}
+                   "lang": "en"}
 
     result["language"] = language_code
     WriteTXT(subtitle_folder)(result, txt_name, txt_options)
