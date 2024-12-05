@@ -190,7 +190,7 @@ def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False
     return srt_name, txt_name, beep_audio_path
 
 
-def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, device, compute_type, align):
+def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, align):
     if Link:
         print(f"Processing YouTube link: {Link}")
         Audio_or_Video_File = download_audio(Link)
@@ -251,8 +251,8 @@ def main(debug, share, device, compute_type):
     ]
 
     demo = gr.Interface(
-        fn=lambda *args, **kwargs: subtitle_maker(
-            *args, device=device, compute_type=compute_type, **kwargs),
+        fn=lambda Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, align: subtitle_maker(
+            Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, align),
         inputs=gradio_inputs, outputs=gradio_outputs,
         title="Auto Subtitle Generator Using WhisperX", description=description
     )
