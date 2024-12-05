@@ -181,7 +181,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     print(
         f"Speed of WhisperX + Alignment: {duration / (whisper_end - whisper_start + alignment_end - alignment_start):.2f}x real-time")
 
-    del audio
+    del audio, result
     gc.collect()
 
     return srt_name, txt_name, beep_audio_path
