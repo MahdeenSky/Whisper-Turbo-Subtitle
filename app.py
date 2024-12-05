@@ -110,7 +110,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     task = "translate" if translate else "transcribe"
     print(f"Transcribing audio with task: {task}")
     result = model.transcribe(audio, batch_size=32 if device == "cuda" else 1, task=task,
-                              language=language_dict[Source_Language]['lang_code'] if Source_Language != "Automatic" else None)
+                              language=language_dict[Source_Language]['lang_code'])
     whisper_end = time.time()
 
     src_lang = Source_Language
@@ -153,7 +153,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
 
     subtitles_processor = SubtitlesProcessor(
         result["segments"],
-        language_code=srt_options["language_code"],
+        lang=srt_options["language_code"],
         max_line_length=srt_options["max_line_width"],
         min_char_length_splitter=srt_options["min_char_length_splitter"],
         is_vtt=srt_options["is_vtt"],
