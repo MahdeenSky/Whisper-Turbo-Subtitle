@@ -1,7 +1,7 @@
 import click
 import gradio as gr
 from utils import language_dict
-from whisperx.utils import WriteTXT
+from whisperx.utils import WriteTXT, WriteSRT
 from SubtitlesProcessor import SubtitlesProcessor
 import math
 import torch
@@ -152,7 +152,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     srt_options = {"max_line_width": 100,
                    "min_char_length_splitter": 70,
                    "is_vtt": False,
-                   "lang": "en" if translate else src_lang}
+                   "lang": "en" if translate else language_code}
 
     result["language"] = language_code
     WriteTXT(subtitle_folder)(result, txt_name, txt_options)
@@ -168,6 +168,8 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     # output_path is a str with your desired filename
     subtitles_processor.save(srt_name, advanced_splitting=True)
     print(f"Writing SRT file to: {srt_name}")
+
+    WriteSRT(subtitle_folder)(result, srt_name.split(".srt")[0] + "2" + ".srt", srt_options)
 
     beep_audio_path = os.path.join(base_path, "beep.wav")
     total_end = time.time()
