@@ -2,7 +2,7 @@ import click
 import gradio as gr
 from utils import language_dict
 from whisperx.utils import WriteTXT
-from whisperx.SubtitlesProcessor import SubtitlesProcessor
+from SubtitlesProcessor import SubtitlesProcessor
 import math
 import torch
 import gc
@@ -12,7 +12,6 @@ import re
 import uuid
 import shutil
 import yt_dlp
-from pydub import AudioSegment
 import logging
 import whisperx
 import subprocess
