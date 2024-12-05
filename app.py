@@ -85,7 +85,7 @@ global_align_model = None
 metadata = None
 
 
-def whisper_subtitle(uploaded_file, Source_Language, model_name, device="cuda", compute_type="float16", translate=False, align=True):
+def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False, device="cuda", compute_type="float16", align=True):
     global language_dict, base_path, subtitle_folder, global_model, global_align_model, metadata
 
     print("Starting transcription process...")
@@ -173,19 +173,16 @@ def whisper_subtitle(uploaded_file, Source_Language, model_name, device="cuda", 
     beep_audio_path = os.path.join(base_path, "beep.wav")
     total_end = time.time()
 
-    print(
-        f"Transcription Process completed in {total_end - total_start:.2f} seconds.")
+    print(f"Transcription Process completed in {total_end - total_start:.2f} seconds.")
     print(f"WhisperX time: {whisper_end - whisper_start:.2f} seconds")
 
     if align and not translate:
         print(f"Alignment time: {alignment_end - alignment_start:.2f} seconds")
 
-    print(
-        f"Speed of WhisperX: {duration / (whisper_end - whisper_start):.2f}x real-time")
+    print(f"Speed of WhisperX: {duration / (whisper_end - whisper_start):.2f}x real-time")
 
     if align and not translate:
-        print(
-            f"Speed of WhisperX + Alignment: {duration / (whisper_end - whisper_start + alignment_end - alignment_start):.2f}x real-time")
+        print(f"Speed of WhisperX + Alignment: {duration / (whisper_end - whisper_start + alignment_end - alignment_start):.2f}x real-time")
 
     del audio, result
     gc.collect()
@@ -193,7 +190,7 @@ def whisper_subtitle(uploaded_file, Source_Language, model_name, device="cuda", 
     return srt_name, txt_name, beep_audio_path
 
 
-def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, device, compute_type, translate, align):
+def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, device, compute_type, align):
     if Link:
         print(f"Processing YouTube link: {Link}")
         Audio_or_Video_File = download_audio(Link)
@@ -206,7 +203,7 @@ def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_
 
     try:
         srt_path, txt_path, beep_audio_path = whisper_subtitle(
-            Audio_or_Video_File, Source_Language, model_name, device=device, compute_type=compute_type, translate=translate, align=align)
+            Audio_or_Video_File, Source_Language, model_name, translate=translate, device=device, compute_type=compute_type, align=align)
     except Exception as e:
         print(f"Error in whisper_subtitle: {e}")
         srt_path, txt_path, beep_audio_path = None, None, None
@@ -222,9 +219,7 @@ os.makedirs(temp_folder, exist_ok=True)
 print(f"Created directories: {subtitle_folder}, {temp_folder}")
 
 source_lang_list = list(language_dict.keys())
-model_list = ["deepdml/faster-whisper-large-v3-turbo-ct2",
-              "large-v2", "base", "small", "medium"]
-
+model_list = ["deepdml/faster-whisper-large-v3-turbo-ct2", "large-v2", "base", "small", "medium"]
 
 @click.command()
 @click.option("--debug", is_flag=True, default=False, help="Enable debug mode.")
@@ -257,7 +252,7 @@ def main(debug, share, device, compute_type):
 
     demo = gr.Interface(
         fn=lambda *args, **kwargs: subtitle_maker(
-            *args, **kwargs),
+            *args, device=device, compute_type=compute_type, **kwargs),
         inputs=gradio_inputs, outputs=gradio_outputs,
         title="Auto Subtitle Generator Using WhisperX", description=description
     )
