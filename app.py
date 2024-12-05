@@ -112,7 +112,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     task = "translate" if translate else "transcribe"
     print(f"Transcribing audio with task: {task}")
     result = model.transcribe(audio, batch_size=32 if device == "cuda" else 1, task=task,
-                              language=Source_Language)
+                              language=language_dict[Source_Language]['lang_code'])
     whisper_end = time.time()
     print(f"Whisper took {whisper_end - whisper_start:.2f} seconds.")
 
