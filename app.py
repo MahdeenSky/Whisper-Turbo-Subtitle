@@ -130,7 +130,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
             time.time() - loading_start))
     align_model = global_align_model
 
-    if translate: # Aligning is not supported for translation
+    if not translate: # Aligning is not supported for translation
         print("Aligning transcription results...")
         alignment_start = time.time()
         result = whisperx.align(result["segments"], align_model,
