@@ -167,7 +167,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
         is_vtt=srt_options["is_vtt"],
     )
 
-    subtitles_processor = SubtitlesProcessor(
+    subtitles_processor2 = SubtitlesProcessor(
         result["segments"],
         lang=language_code,
         max_line_length=srt_options["max_line_width"],
@@ -176,8 +176,8 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     )
     # output_path is a str with your desired filename
     subtitles_processor.save(srt_name, advanced_splitting=True)
-    subtitles_processor.save(srt_name.split(
-        ".srt")[0] + "3" + ".srt", advanced_splitting=False)
+    subtitles_processor2.save(srt_name.split(
+        ".srt")[0] + "3" + ".srt", advanced_splitting=True)
     print(f"Writing SRT file to: {srt_name}")
 
     WriteSRT(subtitle_folder)(result, srt_name.split(
