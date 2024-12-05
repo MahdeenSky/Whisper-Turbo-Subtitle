@@ -85,7 +85,7 @@ global_align_model = None
 metadata = None
 
 
-def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cuda", compute_type="float16"):
+def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False, device="cuda", compute_type="float16"):
     global language_dict, base_path, subtitle_folder, global_model, global_align_model, metadata
 
     print("Starting transcription process...")
@@ -96,14 +96,14 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
 
     if global_model is None:
         loading_start = time.time()
-        print("Loading WhisperX model...")
+        print(f"Loading WhisperX model: {model_name}...")
         if device == "cuda" and not torch.cuda.is_available():
             print("CUDA not available, falling back to CPU.")
             device = "cpu"
             compute_type = "int8"
 
         global_model = whisperx.load_model(
-            "large-v2", device, compute_type=compute_type)
+            model_name, device, compute_type=compute_type)
         print("WhisperX model loaded in {:.2f} seconds.".format(
             time.time() - loading_start))
     model = global_model
@@ -190,7 +190,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     return srt_name, txt_name, beep_audio_path
 
 
-def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, translate, device, compute_type):
+def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, device, compute_type):
     if Link:
         print(f"Processing YouTube link: {Link}")
         Audio_or_Video_File = download_audio(Link)
@@ -203,7 +203,7 @@ def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, transl
 
     try:
         srt_path, txt_path, beep_audio_path = whisper_subtitle(
-            Audio_or_Video_File, Source_Language, translate=translate, device=device, compute_type=compute_type)
+            Audio_or_Video_File, Source_Language, model_name, translate=translate, device=device, compute_type=compute_type)
     except Exception as e:
         print(f"Error in whisper_subtitle: {e}")
         srt_path, txt_path, beep_audio_path = None, None, None
@@ -219,7 +219,7 @@ os.makedirs(temp_folder, exist_ok=True)
 print(f"Created directories: {subtitle_folder}, {temp_folder}")
 
 source_lang_list = list(language_dict.keys())
-
+model_list = ["deepdml/faster-whisper-large-v3-turbo-ct2", "large-v2", "base", "small", "medium"]
 
 @click.command()
 @click.option("--debug", is_flag=True, default=False, help="Enable debug mode.")
@@ -238,6 +238,8 @@ def main(debug, share, device, compute_type):
                    placeholder="Enter file path here if not uploading a file or link"),
         gr.Dropdown(label="Language", choices=source_lang_list,
                     value="English"),
+        gr.Dropdown(label="Model", choices=model_list,
+                    value="deepdml/faster-whisper-large-v3-turbo-ct2"),
         gr.Checkbox(label="Translate to English", value=False)
     ]
 
