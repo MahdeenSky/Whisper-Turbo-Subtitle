@@ -102,17 +102,14 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     result = model.transcribe(audio, batch_size=32 if device == "cuda" else 1, task=task,
                               language=language_dict[Source_Language]['lang_code'] if Source_Language != "Automatic" else None)
 
-    if Source_Language == "Automatic":
-        src_lang = get_language_name(result["language"])
-        print(f"Detected source language: {src_lang}")
-    else:
-        src_lang = Source_Language
-        print(f"Using provided source language: {src_lang}")
+    src_lang = Source_Language
+    print(f"Using provided source language: {src_lang}")
+    language_code = language_dict[src_lang]['lang_code']
 
     if global_align_model is None:
         print("Loading alignment model...")
         global_align_model, metadata = whisperx.load_align_model(
-            language_code=result["language"], device=device)
+            language_code=language_code, device=device)
         print("Alignment model loaded.")
     align_model = global_align_model
 
@@ -173,7 +170,7 @@ os.makedirs(subtitle_folder, exist_ok=True)
 os.makedirs(temp_folder, exist_ok=True)
 print(f"Created directories: {subtitle_folder}, {temp_folder}")
 
-source_lang_list = ['Automatic'] + list(language_dict.keys())
+source_lang_list = list(language_dict.keys())
 
 
 @click.command()
@@ -191,7 +188,7 @@ def main(debug, share, device, compute_type):
         gr.Textbox(label="File Path (optional)",
                    placeholder="Enter file path here if not uploading a file or link"),
         gr.Dropdown(label="Language", choices=source_lang_list,
-                    value="Automatic"),
+                    value="English"),
         gr.Checkbox(label="Translate to English", value=False)
     ]
 
