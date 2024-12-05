@@ -173,16 +173,19 @@ def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False
     beep_audio_path = os.path.join(base_path, "beep.wav")
     total_end = time.time()
 
-    print(f"Transcription Process completed in {total_end - total_start:.2f} seconds.")
+    print(
+        f"Transcription Process completed in {total_end - total_start:.2f} seconds.")
     print(f"WhisperX time: {whisper_end - whisper_start:.2f} seconds")
 
     if align and not translate:
         print(f"Alignment time: {alignment_end - alignment_start:.2f} seconds")
 
-    print(f"Speed of WhisperX: {duration / (whisper_end - whisper_start):.2f}x real-time")
+    print(
+        f"Speed of WhisperX: {duration / (whisper_end - whisper_start):.2f}x real-time")
 
     if align and not translate:
-        print(f"Speed of WhisperX + Alignment: {duration / (whisper_end - whisper_start + alignment_end - alignment_start):.2f}x real-time")
+        print(
+            f"Speed of WhisperX + Alignment: {duration / (whisper_end - whisper_start + alignment_end - alignment_start):.2f}x real-time")
 
     del audio, result
     gc.collect()
@@ -190,7 +193,7 @@ def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False
     return srt_name, txt_name, beep_audio_path
 
 
-def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, device, compute_type, align):
+def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, align, device, compute_type):
     if Link:
         print(f"Processing YouTube link: {Link}")
         Audio_or_Video_File = download_audio(Link)
@@ -219,7 +222,9 @@ os.makedirs(temp_folder, exist_ok=True)
 print(f"Created directories: {subtitle_folder}, {temp_folder}")
 
 source_lang_list = list(language_dict.keys())
-model_list = ["deepdml/faster-whisper-large-v3-turbo-ct2", "large-v2", "base", "small", "medium"]
+model_list = ["deepdml/faster-whisper-large-v3-turbo-ct2",
+              "large-v2", "base", "small", "medium"]
+
 
 @click.command()
 @click.option("--debug", is_flag=True, default=False, help="Enable debug mode.")
@@ -252,7 +257,7 @@ def main(debug, share, device, compute_type):
 
     demo = gr.Interface(
         fn=lambda *args, **kwargs: subtitle_maker(
-            *args, device=device, compute_type=compute_type, **kwargs),
+            *args, device=device, compute_type=compute_type),
         inputs=gradio_inputs, outputs=gradio_outputs,
         title="Auto Subtitle Generator Using WhisperX", description=description
     )
