@@ -85,7 +85,7 @@ global_align_model = None
 metadata = None
 
 
-def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False, device="cuda", compute_type="float16"):
+def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False, device="cuda", compute_type="float16", align=True):
     global language_dict, base_path, subtitle_folder, global_model, global_align_model, metadata
 
     print("Starting transcription process...")
@@ -121,16 +121,16 @@ def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False
     print(f"Using provided source language: {src_lang}")
     language_code = language_dict[src_lang]['lang_code']
 
-    if global_align_model is None:
-        loading_start = time.time()
-        print("Loading alignment model...")
-        global_align_model, metadata = whisperx.load_align_model(
-            language_code=language_code, device=device)
-        print("Alignment model loaded in {:.2f} seconds.".format(
-            time.time() - loading_start))
-    align_model = global_align_model
+    if align and not translate:  # Aligning is not supported for translation
+        if global_align_model is None:
+            loading_start = time.time()
+            print("Loading alignment model...")
+            global_align_model, metadata = whisperx.load_align_model(
+                language_code=language_code, device=device)
+            print("Alignment model loaded in {:.2f} seconds.".format(
+                time.time() - loading_start))
+        align_model = global_align_model
 
-    if not translate:  # Aligning is not supported for translation
         print("Aligning transcription results...")
         alignment_start = time.time()
         result = whisperx.align(result["segments"], align_model,
@@ -176,12 +176,12 @@ def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False
     print(f"Transcription Process completed in {total_end - total_start:.2f} seconds.")
     print(f"WhisperX time: {whisper_end - whisper_start:.2f} seconds")
 
-    if not translate:
+    if align and not translate:
         print(f"Alignment time: {alignment_end - alignment_start:.2f} seconds")
 
     print(f"Speed of WhisperX: {duration / (whisper_end - whisper_start):.2f}x real-time")
 
-    if not translate:
+    if align and not translate:
         print(f"Speed of WhisperX + Alignment: {duration / (whisper_end - whisper_start + alignment_end - alignment_start):.2f}x real-time")
 
     del audio, result
@@ -190,7 +190,7 @@ def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False
     return srt_name, txt_name, beep_audio_path
 
 
-def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, device, compute_type):
+def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, device, compute_type, align):
     if Link:
         print(f"Processing YouTube link: {Link}")
         Audio_or_Video_File = download_audio(Link)
@@ -203,7 +203,7 @@ def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_
 
     try:
         srt_path, txt_path, beep_audio_path = whisper_subtitle(
-            Audio_or_Video_File, Source_Language, model_name, translate=translate, device=device, compute_type=compute_type)
+            Audio_or_Video_File, Source_Language, model_name, translate=translate, device=device, compute_type=compute_type, align=align)
     except Exception as e:
         print(f"Error in whisper_subtitle: {e}")
         srt_path, txt_path, beep_audio_path = None, None, None
@@ -240,7 +240,8 @@ def main(debug, share, device, compute_type):
                     value="English"),
         gr.Dropdown(label="Model", choices=model_list,
                     value="deepdml/faster-whisper-large-v3-turbo-ct2"),
-        gr.Checkbox(label="Translate to English", value=False)
+        gr.Checkbox(label="Translate to English", value=False),
+        gr.Checkbox(label="Perform Alignment", value=True)
     ]
 
     gradio_outputs = [
