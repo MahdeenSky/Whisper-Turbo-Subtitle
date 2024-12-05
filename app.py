@@ -167,38 +167,22 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
         is_vtt=srt_options["is_vtt"],
     )
 
-    subtitles_processor2 = SubtitlesProcessor(
-        result["segments"],
-        lang=language_code,
-        max_line_length=srt_options["max_line_width"],
-        min_char_length_splitter=srt_options["min_char_length_splitter"],
-        is_vtt=srt_options["is_vtt"],
-    )
-    # output_path is a str with your desired filename
     subtitles_processor.save(srt_name, advanced_splitting=True)
-    subtitles_processor2.save(srt_name.split(
-        ".srt")[0] + "3" + ".srt", advanced_splitting=True)
     print(f"Writing SRT file to: {srt_name}")
-
-    WriteSRT(subtitle_folder)(result, srt_name.split(
-        ".srt")[0] + "2" + ".srt", txt_options)
 
     beep_audio_path = os.path.join(base_path, "beep.wav")
     total_end = time.time()
 
-    print(
-        f"Transcription Process completed in {total_end - total_start:.2f} seconds.")
+    print(f"Transcription Process completed in {total_end - total_start:.2f} seconds.")
     print(f"WhisperX time: {whisper_end - whisper_start:.2f} seconds")
 
     if not translate:
         print(f"Alignment time: {alignment_end - alignment_start:.2f} seconds")
 
-    print(
-        f"Speed of WhisperX: {duration / (whisper_end - whisper_start):.2f}x real-time")
+    print(f"Speed of WhisperX: {duration / (whisper_end - whisper_start):.2f}x real-time")
 
     if not translate:
-        print(
-            f"Speed of WhisperX + Alignment: {duration / (whisper_end - whisper_start + alignment_end - alignment_start):.2f}x real-time")
+        print(f"Speed of WhisperX + Alignment: {duration / (whisper_end - whisper_start + alignment_end - alignment_start):.2f}x real-time")
 
     del audio, result
     gc.collect()
