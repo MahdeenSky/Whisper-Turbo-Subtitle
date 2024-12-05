@@ -82,10 +82,11 @@ def get_media_duration(file_path):
 # Global variable to store the loaded model
 global_model = None
 global_align_model = None
+metadata = None
 
 
 def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cuda", compute_type="float16"):
-    global language_dict, base_path, subtitle_folder, global_model, global_align_model
+    global language_dict, base_path, subtitle_folder, global_model, global_align_model, metadata
 
     print("Starting transcription process...")
     total_start = time.time()
@@ -220,7 +221,7 @@ source_lang_list = list(language_dict.keys())
 @click.option("--device", default="cuda", help="Device to use (cuda or cpu)")
 @click.option("--compute_type", default="float16", help="Compute type (float16, float32 or int8)")
 def main(debug, share, device, compute_type):
-    global global_model, global_align_model
+    global global_model, global_align_model, metadata
     description = "**Note**: Avoid uploading large video files. Instead, upload the audio from the video for faster processing."
 
     gradio_inputs = [
@@ -264,6 +265,8 @@ def main(debug, share, device, compute_type):
             gc.collect()
             torch.cuda.empty_cache()
             print("Alignment model unloaded.")
+
+        del metadata
 
 
 if __name__ == "__main__":
