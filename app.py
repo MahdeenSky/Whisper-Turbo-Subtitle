@@ -1,7 +1,8 @@
 import click
 import gradio as gr
 from utils import language_dict
-from whisperx.utils import WriteSRT, WriteTXT
+from whisperx.utils import WriteTXT
+from whisperx.SubtitlesProcessor import SubtitlesProcessor
 import math
 import torch
 import gc
@@ -14,6 +15,7 @@ import yt_dlp
 from pydub import AudioSegment
 import logging
 import whisperx
+import subprocess
 
 logging.basicConfig()
 logging.getLogger("whisperx").setLevel(logging.INFO)
@@ -68,6 +70,16 @@ def get_audio_file(uploaded_file):
     return file_path
 
 
+def get_media_duration(file_path):
+    result = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1", file_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT
+    )
+    return float(result.stdout)
+
+
 # Global variable to store the loaded model
 global_model = None
 global_align_model = None
@@ -77,11 +89,9 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     global language_dict, base_path, subtitle_folder, global_model, global_align_model
 
     print("Starting transcription process...")
-    start = time.time()
+    total_start = time.time()
 
-    audio = AudioSegment.from_file(uploaded_file)
-    duration = math.ceil(len(audio) / 1000)
-    del audio
+    duration = math.ceil(get_media_duration(uploaded_file))
     print(f"Audio duration: {duration} seconds")
 
     if global_model is None:
@@ -96,11 +106,13 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
         print("WhisperX model loaded.")
     model = global_model
 
+    whisper_start = time.time()
     audio = whisperx.load_audio(uploaded_file)
     task = "translate" if translate else "transcribe"
     print(f"Transcribing audio with task: {task}")
     result = model.transcribe(audio, batch_size=32 if device == "cuda" else 1, task=task,
                               language=language_dict[Source_Language]['lang_code'] if Source_Language != "Automatic" else None)
+    whisper_end = time.time()
 
     src_lang = Source_Language
     print(f"Using provided source language: {src_lang}")
@@ -114,8 +126,10 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     align_model = global_align_model
 
     print("Aligning transcription results...")
+    alignment_start = time.time()
     result = whisperx.align(result["segments"], align_model,
                             metadata, audio, device, return_char_alignments=False)
+    alignment_end = time.time()
 
     if os.path.exists(uploaded_file):
         os.remove(uploaded_file)
@@ -125,19 +139,41 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     srt_name = clean_file_name(f"{subtitle_folder}/{base_name}_{src_lang}.srt")
     txt_name = srt_name.replace(".srt", ".txt")
 
-    options = {"max_line_width": None,
-               "max_line_count": None, "highlight_words": False}
+    txt_options = {"max_line_width": None,
+                   "max_line_count": None,
+                   "highlight_words": False}
 
-    print(f"Writing SRT file to: {srt_name}")
-    WriteSRT(subtitle_folder)(result, srt_name, options)
+    srt_options = {"max_line_width": 100,
+                   "min_char_length_splitter": 70,
+                   "is_vtt": False,
+                   "language_code": language_code}
+
+    result["language"] = language_code
+    WriteTXT(subtitle_folder)(result, txt_name, txt_options)
     print(f"Writing TXT file to: {txt_name}")
-    WriteTXT(subtitle_folder)(result, txt_name, options)
+
+    subtitles_processor = SubtitlesProcessor(
+        result["segments"],
+        language_code=srt_options["language_code"],
+        max_line_length=srt_options["max_line_width"],
+        min_char_length_splitter=srt_options["min_char_length_splitter"],
+        is_vtt=srt_options["is_vtt"],
+    )
+    # output_path is a str with your desired filename
+    subtitles_processor.save(srt_name, advanced_splitting=True)
+    print(f"Writing SRT file to: {srt_name}")
 
     beep_audio_path = os.path.join(base_path, "beep.wav")
-    end = time.time()
+    total_end = time.time()
 
-    print(f"Transcription completed in {end - start:.2f} seconds.")
-    print(f"Speed: {duration / (end - start):.2f}x real-time")
+    print(
+        f"Transcription Process completed in {total_end - total_start:.2f} seconds.")
+    print(f"WhisperX time: {whisper_end - whisper_start:.2f} seconds")
+    print(f"Alignment time: {alignment_end - alignment_start:.2f} seconds")
+    print(
+        f"Speed of WhisperX: {duration / (whisper_end - whisper_start):.2f}x real-time")
+    print(
+        f"Speed of WhisperX + Alignment: {duration / (alignment_end - alignment_start):.2f}x real-time")
 
     return srt_name, txt_name, beep_audio_path
 
