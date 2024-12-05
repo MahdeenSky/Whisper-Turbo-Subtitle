@@ -94,6 +94,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     print(f"Audio duration: {duration} seconds")
 
     if global_model is None:
+        loading_start = time.time()
         print("Loading WhisperX model...")
         if device == "cuda" and not torch.cuda.is_available():
             print("CUDA not available, falling back to CPU.")
@@ -102,7 +103,8 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
 
         global_model = whisperx.load_model(
             "large-v2", device, compute_type=compute_type)
-        print("WhisperX model loaded.")
+        print("WhisperX model loaded in {:.2f} seconds.".format(
+            time.time() - loading_start))
     model = global_model
 
     whisper_start = time.time()
@@ -110,18 +112,21 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     task = "translate" if translate else "transcribe"
     print(f"Transcribing audio with task: {task}")
     result = model.transcribe(audio, batch_size=32 if device == "cuda" else 1, task=task,
-                              language=language_dict[Source_Language]['lang_code'])
+                              language=Source_Language)
     whisper_end = time.time()
+    print(f"Whisper took {whisper_end - whisper_start:.2f} seconds.")
 
     src_lang = Source_Language
     print(f"Using provided source language: {src_lang}")
     language_code = language_dict[src_lang]['lang_code']
 
     if global_align_model is None:
+        loading_start = time.time()
         print("Loading alignment model...")
         global_align_model, metadata = whisperx.load_align_model(
             language_code=language_code, device=device)
-        print("Alignment model loaded.")
+        print("Alignment model loaded in {:.2f} seconds.".format(
+            time.time() - loading_start))
     align_model = global_align_model
 
     print("Aligning transcription results...")
@@ -129,6 +134,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     result = whisperx.align(result["segments"], align_model,
                             metadata, audio, device, return_char_alignments=False)
     alignment_end = time.time()
+    print(f"Alignment took {alignment_end - alignment_start:.2f} seconds.")
 
     if os.path.exists(uploaded_file):
         os.remove(uploaded_file)
@@ -145,7 +151,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     srt_options = {"max_line_width": 100,
                    "min_char_length_splitter": 70,
                    "is_vtt": False,
-                   "language_code": language_code}
+                   "lang": language_code}
 
     result["language"] = language_code
     WriteTXT(subtitle_folder)(result, txt_name, txt_options)
@@ -153,7 +159,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
 
     subtitles_processor = SubtitlesProcessor(
         result["segments"],
-        lang=srt_options["language_code"],
+        lang=srt_options["lang"],
         max_line_length=srt_options["max_line_width"],
         min_char_length_splitter=srt_options["min_char_length_splitter"],
         is_vtt=srt_options["is_vtt"],
@@ -172,7 +178,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     print(
         f"Speed of WhisperX: {duration / (whisper_end - whisper_start):.2f}x real-time")
     print(
-        f"Speed of WhisperX + Alignment: {duration / (alignment_end - alignment_start):.2f}x real-time")
+        f"Speed of WhisperX + Alignment: {duration / (whisper_end - whisper_start + alignment_end - alignment_start):.2f}x real-time")
 
     return srt_name, txt_name, beep_audio_path
 
