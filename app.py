@@ -130,12 +130,13 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
             time.time() - loading_start))
     align_model = global_align_model
 
-    print("Aligning transcription results...")
-    alignment_start = time.time()
-    result = whisperx.align(result["segments"], align_model,
-                            metadata, audio, device, return_char_alignments=False)
-    alignment_end = time.time()
-    print(f"Alignment took {alignment_end - alignment_start:.2f} seconds.")
+    if translate: # Aligning is not supported for translation
+        print("Aligning transcription results...")
+        alignment_start = time.time()
+        result = whisperx.align(result["segments"], align_model,
+                                metadata, audio, device, return_char_alignments=False)
+        alignment_end = time.time()
+        print(f"Alignment took {alignment_end - alignment_start:.2f} seconds.")
 
     if os.path.exists(uploaded_file):
         os.remove(uploaded_file)
@@ -169,7 +170,7 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     subtitles_processor.save(srt_name, advanced_splitting=True)
     print(f"Writing SRT file to: {srt_name}")
 
-    WriteSRT(subtitle_folder)(result, srt_name.split(".srt")[0] + "2" + ".srt", srt_options)
+    WriteSRT(subtitle_folder)(result, srt_name.split(".srt")[0] + "2" + ".srt", txt_options)
 
     beep_audio_path = os.path.join(base_path, "beep.wav")
     total_end = time.time()
