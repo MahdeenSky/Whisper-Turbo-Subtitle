@@ -178,7 +178,8 @@ def whisper_subtitle(uploaded_file, Source_Language, translate=False, device="cu
     print(
         f"Transcription Process completed in {total_end - total_start:.2f} seconds.")
     print(f"WhisperX time: {whisper_end - whisper_start:.2f} seconds")
-    print(f"Alignment time: {alignment_end - alignment_start:.2f} seconds")
+    if not translate:
+        print(f"Alignment time: {alignment_end - alignment_start:.2f} seconds")
     print(
         f"Speed of WhisperX: {duration / (whisper_end - whisper_start):.2f}x real-time")
     print(
