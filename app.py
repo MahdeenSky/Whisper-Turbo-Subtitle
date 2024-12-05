@@ -85,7 +85,7 @@ global_align_model = None
 metadata = None
 
 
-def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False, device="cuda", compute_type="float16", align=True):
+def whisper_subtitle(uploaded_file, Source_Language, model_name, device="cuda", compute_type="float16", translate=False, align=True):
     global language_dict, base_path, subtitle_folder, global_model, global_align_model, metadata
 
     print("Starting transcription process...")
@@ -130,6 +130,7 @@ def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False
             print("Alignment model loaded in {:.2f} seconds.".format(
                 time.time() - loading_start))
         align_model = global_align_model
+
         print("Aligning transcription results...")
         alignment_start = time.time()
         result = whisperx.align(result["segments"], align_model,
@@ -192,7 +193,7 @@ def whisper_subtitle(uploaded_file, Source_Language, model_name, translate=False
     return srt_name, txt_name, beep_audio_path
 
 
-def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, translate, device, compute_type, align):
+def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_name, device, compute_type, translate, align):
     if Link:
         print(f"Processing YouTube link: {Link}")
         Audio_or_Video_File = download_audio(Link)
@@ -205,7 +206,7 @@ def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, model_
 
     try:
         srt_path, txt_path, beep_audio_path = whisper_subtitle(
-            Audio_or_Video_File, Source_Language, model_name, translate=translate, device=device, compute_type=compute_type, align=align)
+            Audio_or_Video_File, Source_Language, model_name, device=device, compute_type=compute_type, translate=translate, align=align)
     except Exception as e:
         print(f"Error in whisper_subtitle: {e}")
         srt_path, txt_path, beep_audio_path = None, None, None
