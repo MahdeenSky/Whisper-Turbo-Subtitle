@@ -5,7 +5,6 @@ import math
 import torch
 import gc
 import time
-from faster_whisper import WhisperModel
 import os
 import re
 import uuid
@@ -14,61 +13,52 @@ import yt_dlp
 from pydub import AudioSegment
 import requests
 import logging
+import whisperx
 
 logging.basicConfig()
-logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
+logging.getLogger("whisperx").setLevel(logging.INFO)
+
 
 def get_language_name(lang_code):
     global language_dict
-    # Iterate through the language dictionary
     for language, details in language_dict.items():
-        # Check if the language code matches
         if details["lang_code"] == lang_code:
-            return language  # Return the language name
+            return language
     return lang_code
 
 
 def clean_file_name(file_path):
-    # Get the base file name and extension
     file_name = os.path.basename(file_path)
     file_name, file_extension = os.path.splitext(file_name)
-
-    # Replace non-alphanumeric characters with an underscore
     cleaned = re.sub(r'[^a-zA-Z\d]+', '_', file_name)
-
-    # Remove any multiple underscores
     clean_file_name = re.sub(r'_+', '_', cleaned).strip('_')
-
-    # Generate a random UUID for uniqueness
     random_uuid = uuid.uuid4().hex[:6]
-
-    # Combine cleaned file name with the original extension
     clean_file_path = os.path.join(os.path.dirname(
         file_path), clean_file_name + f"_{random_uuid}" + file_extension)
-
     return clean_file_path
 
 
-# Function to download the audio from a link using yt-dlp and convert to WAV
 def download_and_convert_to_wav(link):
     print("Downloading audio from Link: ", link)
     global temp_folder
     ydl_opts = {
         'format': 'bestaudio/best',
-        'noplaylist': True,  # Add this line to ensure only a single video is downloaded
+        'noplaylist': True,
         'outtmpl': f'{temp_folder}/%(title)s.%(ext)s',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'wav',
+            'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(link, download=True)
         if 'entries' in info_dict:
-            audio_file = temp_folder + "/" + info_dict['entries'][0]['title'] + ".wav"
+            audio_file = temp_folder + "/" + \
+                info_dict['entries'][0]['title'] + ".mp3"
         else:
-            audio_file = ydl.prepare_filename(info_dict).rsplit(".", 1)[0] + ".wav"
+            audio_file = ydl.prepare_filename(
+                info_dict).rsplit(".", 1)[0] + ".mp3"
     return audio_file
 
 
@@ -80,31 +70,23 @@ def format_segments(segments):
 
     for i in saved_segments:
         temp_sentence_timestamp = {}
-        # Store sentence information in sentence_timestamp
         text = i.text.strip()
-        # Get the current index for the new entry
         sentence_id = len(sentence_timestamp)
         sentence_timestamp.append({
-            "id": sentence_id,  # Use the index as the id
+            "id": sentence_id,
             "text": text,
             "start": i.start,
             "end": i.end,
-            "words": []  # Initialize words as an empty list within the sentence
+            "words": []
         })
         speech_to_text += text + " "
-
-        # Process each word in the sentence
         for word in i.words:
             word_data = {
                 "word": word.word.strip(),
                 "start": word.start,
                 "end": word.end
             }
-
-            # Append word timestamps to the sentence's word list
             sentence_timestamp[sentence_id]["words"].append(word_data)
-
-            # Optionally, add the word data to the global words_timestamp list
             words_timestamp.append(word_data)
 
     return sentence_timestamp, words_timestamp, speech_to_text
@@ -126,16 +108,11 @@ def combine_word_segments(words_timestamp, max_words_per_subtitle=8, min_silence
             word = i['word']
             word_start = i['start']
             word_end = i['end']
-
-            # Check for sentence-ending punctuation
             is_end_of_sentence = word.endswith(('.', '?', '!'))
 
-            # Check for conditions to create a new subtitle
             if ((last_end_time is not None and word_start - last_end_time > min_silence_between_words)
                 or word_count >= max_words_per_subtitle
                     or is_end_of_sentence):
-
-                # Store the previous subtitle if there's any
                 if text:
                     before_translate[id] = {
                         "text": text,
@@ -143,25 +120,22 @@ def combine_word_segments(words_timestamp, max_words_per_subtitle=8, min_silence
                         "end": end
                     }
                     id += 1
-
-                # Reset for the new subtitle segment
                 text = word
-                start = word_start  # Set the start time for the new subtitle
+                start = word_start
                 word_count = 1
             else:
-                if word_count == 0:  # First word in the subtitle
-                    start = word_start  # Ensure the start time is set
+                if word_count == 0:
+                    start = word_start
                 text += " " + word
                 word_count += 1
 
-            end = word_end  # Update the end timestamp
-            last_end_time = word_end  # Update the last end timestamp
+            end = word_end
+            last_end_time = word_end
 
         except KeyError as e:
             print(f"KeyError: {e} - Skipping word")
             pass
 
-    # After the loop, make sure to add the last subtitle segment
     if text:
         before_translate[id] = {
             "text": text,
@@ -181,20 +155,14 @@ def convert_time_to_srt_format(seconds):
 
 
 def write_subtitles_to_file(subtitles, filename="subtitles.srt"):
-
-    # Open the file with UTF-8 encoding
     with open(filename, 'w', encoding='utf-8') as f:
         for id, entry in subtitles.items():
-            # Write the subtitle index
             f.write(f"{id}\n")
             if entry['start'] is None or entry['end'] is None:
                 print(id)
-            # Write the start and end time in SRT format
             start_time = convert_time_to_srt_format(entry['start'])
             end_time = convert_time_to_srt_format(entry['end'])
             f.write(f"{start_time} --> {end_time}\n")
-
-            # Write the text and speaker information
             f.write(f"{entry['text']}\n\n")
 
 
@@ -224,42 +192,49 @@ def get_audio_file(uploaded_file):
     return file_path
 
 
-def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8, translate=False):
-    global language_dict, base_path, subtitle_folder
+# Global variable to store the loaded model
+global_model = None
+
+
+def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8, translate=False, device="cuda", compute_type="float16"):
+    global language_dict, base_path, subtitle_folder, global_model
+
     print("Transcribing audio...")
     start = time.time()
 
-    # get duration of the audio file
     audio = AudioSegment.from_file(uploaded_file)
     duration = math.ceil(len(audio) / 1000)
     del audio
 
-    if torch.cuda.is_available():
-        device = "cuda"
-        compute_type = "float16"
-    else:
-        device = "cpu"
-        compute_type = "int8"
-    faster_whisper_model = WhisperModel(
-        "deepdml/faster-whisper-large-v3-turbo-ct2", device=device, compute_type=compute_type)
+    # Load model only if it hasn't been loaded yet
+    if global_model is None:
+        if device == "cuda" and not torch.cuda.is_available():
+            print("CUDA not available, falling back to CPU.")
+            device = "cpu"
+            compute_type = "int8"
+
+        global_model = whisperx.load_model(
+            "large-v2", device, compute_type=compute_type)
+
+    model = global_model
+
+    audio = whisperx.load_audio(uploaded_file)
+    task = "translate" if translate else "transcribe"
+    result = model.transcribe(audio, batch_size=32 if device == "cuda" else 1, task=task,
+                              language=language_dict[Source_Language]['lang_code'] if Source_Language != "Automatic" else None)
 
     if Source_Language == "Automatic":
-        segments, d = faster_whisper_model.transcribe(
-            uploaded_file, word_timestamps=True, task="translate" if translate else "transcribe")
-        lang_code = d.language
+        lang_code = result["language"]
         src_lang = get_language_name(lang_code)
     else:
         lang = language_dict[Source_Language]['lang_code']
-        segments, d = faster_whisper_model.transcribe(
-            uploaded_file, word_timestamps=True, language=lang, task="translate" if translate else "transcribe")
         src_lang = Source_Language
 
-    sentence_timestamp, words_timestamp, text = format_segments(segments)
+    sentence_timestamp, words_timestamp, text = format_segments(
+        result["segments"])
+
     if os.path.exists(uploaded_file):
         os.remove(uploaded_file)
-    del faster_whisper_model
-    gc.collect()
-    torch.cuda.empty_cache()
 
     word_segments = combine_word_segments(
         words_timestamp, max_words_per_subtitle=max_words_per_subtitle)
@@ -276,7 +251,7 @@ def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8, t
 
     with open(original_txt_name, 'w', encoding='utf-8') as f1:
         f1.write(text)
-    
+
     beep_audio_path = os.path.join(base_path, "beep.wav")
     end = time.time()
 
@@ -285,17 +260,18 @@ def whisper_subtitle(uploaded_file, Source_Language, max_words_per_subtitle=8, t
     return original_srt_name, customize_srt_name, word_level_srt_name, original_txt_name, beep_audio_path
 
 
-def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, max_words_per_subtitle, translate):
+def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, max_words_per_subtitle, translate, device, compute_type):
     if Link:
         Audio_or_Video_File = download_and_convert_to_wav(Link)
     elif File_Path:
         Audio_or_Video_File = File_Path
     elif not Audio_or_Video_File:
-        raise ValueError("Either an audio/video file, a YouTube link, or a file path must be provided.")
-    
+        raise ValueError(
+            "Either an audio/video file, a YouTube link, or a file path must be provided.")
+
     try:
         default_srt_path, customize_srt_path, word_level_srt_path, text_path, beep_audio_path = whisper_subtitle(
-            Audio_or_Video_File, Source_Language, max_words_per_subtitle=max_words_per_subtitle, translate=translate
+            Audio_or_Video_File, Source_Language, max_words_per_subtitle=max_words_per_subtitle, translate=translate, device=device, compute_type=compute_type
         )
     except Exception as e:
         print(f"Error in whisper_subtitle: {e}")
@@ -303,8 +279,6 @@ def subtitle_maker(Audio_or_Video_File, Link, File_Path, Source_Language, max_wo
 
     return default_srt_path, customize_srt_path, word_level_srt_path, text_path, beep_audio_path
 
-
-# Updated Gradio interface to accept a link as well
 
 base_path = "."
 subtitle_folder = f"{base_path}/generated_subtitle"
@@ -322,14 +296,20 @@ source_lang_list.extend(available_language)
 @click.command()
 @click.option("--debug", is_flag=True, default=False, help="Enable debug mode.")
 @click.option("--share", is_flag=True, default=False, help="Enable sharing of the interface.")
-def main(debug, share):
+@click.option("--device", default="cuda", help="Device to use (cuda or cpu)")
+@click.option("--compute_type", default="float16", help="Compute type (float16, float32 or int8)")
+def main(debug, share, device, compute_type):
     description = "**Note**: Avoid uploading large video files. Instead, upload the audio from the video for faster processing."
     gradio_inputs = [
-        gr.File(label="Upload Audio or Video File"),  # Removed optional=True
-        gr.Textbox(label="YouTube Link (optional)", placeholder="Enter link here if not uploading a file"),
-        gr.Textbox(label="File Path (optional)", placeholder="Enter file path here if not uploading a file or link"),
-        gr.Dropdown(label="Language", choices=source_lang_list, value="Automatic"),
-        gr.Number(label="Max Word Per Subtitle Segment [Useful for Vertical Videos]", value=8),
+        gr.File(label="Upload Audio or Video File"),
+        gr.Textbox(label="YouTube Link (optional)",
+                   placeholder="Enter link here if not uploading a file"),
+        gr.Textbox(label="File Path (optional)",
+                   placeholder="Enter file path here if not uploading a file or link"),
+        gr.Dropdown(label="Language", choices=source_lang_list,
+                    value="Automatic"),
+        gr.Number(
+            label="Max Word Per Subtitle Segment [Useful for Vertical Videos]", value=8),
         gr.Checkbox(label="Translate to English", value=False)
     ]
 
@@ -342,11 +322,22 @@ def main(debug, share):
     ]
 
     demo = gr.Interface(
-        fn=subtitle_maker, inputs=gradio_inputs, outputs=gradio_outputs,
-        title="Auto Subtitle Generator Using Whisper-Large-V3-Turbo-Ct2", description=description
+        fn=lambda *args, **kwargs: subtitle_maker(
+            *args, device=device, compute_type=compute_type, **kwargs),
+        inputs=gradio_inputs, outputs=gradio_outputs,
+        title="Auto Subtitle Generator Using WhisperX", description=description
     )
 
-    demo.queue().launch(debug=debug, share=share)
+    try:
+        demo.queue().launch(debug=debug, share=share)
+    except Exception as e:
+        print(f"Error during launch: {e}")
+    finally:
+        if global_model is not None:
+            del global_model
+            gc.collect()
+            torch.cuda.empty_cache()
+            print("Model unloaded.")
 
 
 if __name__ == "__main__":
