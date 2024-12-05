@@ -257,7 +257,7 @@ def main(debug, share, device, compute_type):
 
     demo = gr.Interface(
         fn=lambda *args, **kwargs: subtitle_maker(
-            *args, device=device, compute_type=compute_type, **kwargs),
+            *args, **kwargs),
         inputs=gradio_inputs, outputs=gradio_outputs,
         title="Auto Subtitle Generator Using WhisperX", description=description
     )
